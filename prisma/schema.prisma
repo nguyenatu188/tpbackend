@@ -1,4 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Privacy {
+  PUBLIC
+  PRIVATE
+  FRIENDS_ONLY
+}
+
+enum Gender {
+  male
+  female
+}
+
+model User {
+  id              String        @id @default(uuid())
+  fullname        String
+  username        String        @unique
+  email           String        @unique
+  gender          Gender
+  password        String
+  avatarUrl       String?
+  createdAt       DateTime      @default(now())
+  trips           Trip[]        @relation("TripOwner")
+  sharedTrips     Trip[]        @relation("TripSharedUsers")
+  notifications   Notification[]
+  reviews         Review[]
+  followers       Follow[]      @relation("UserFollowers")
+  following       Follow[]      @relation("UserFollowing")
+}
+
+model Trip {
+  id              String         @id @default(uuid())
+  title           String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  privacy         Privacy
+  ownerId         String
+  owner           User           @relation("TripOwner", fields: [ownerId], references: [id])
+  accommodations  Accommodation[]
+  transports      Transport[]
+  activities      Activity[]
+  packingList     PackingItem[]
+  suggestions     Suggestion[]
+  sharedUsers     User[]         @relation("TripSharedUsers")
+  links           ReferenceLink[]
+  notifications   Notification[]
+  reviews         Review[]
+}
+
+model Accommodation {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  price     Float?
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model Transport {
+  id        String   @id @default(uuid())
+  type      String
+  from      String
+  to        String
+  price     Float?
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  time      DateTime
+  price     Float?
+  category  String
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model PackingItem {
+  id        String   @id @default(uuid())
+  name      String
+  quantity  Int
+  checked   Boolean  @default(false)
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model Suggestion {
+  id        String   @id @default(uuid())
+  type      String
+  content   String
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model ReferenceLink {
+  id        String   @id @default(uuid())
+  url       String
+  title     String
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tripId    String?
+  trip      Trip?     @relation(fields: [tripId], references: [id])
+}
+
+model Follow {
+  id           String   @id @default(uuid())
+  followerId   String
+  followingId  String
+  follower     User     @relation("UserFollowing", fields: [followerId], references: [id])
+  following    User     @relation("UserFollowers", fields: [followingId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+
