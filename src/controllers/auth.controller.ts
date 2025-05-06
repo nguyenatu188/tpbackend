@@ -3,13 +3,15 @@ import prisma from '../db/prisma.js'
 import bcryptjs from "bcryptjs"
 import generateToken from '../utils/generateToken.js'
 import { OAuth2Client } from 'google-auth-library'
+import sendEmail from '../utils/sendEmail.js'
+import { generateResetToken } from '../utils/generateToken.js'
 
 export const login = async (req: Request, res:Response) => {
   try {
     const { username, password } = req.body //destructuring
     const user = await prisma.user.findUnique({ where: { username } })
     if (!user) {
-      res.status(400).json({error: "Invalid credentials"})
+      res.status(400).json({error: "can't find user"})
       return
     }
     const isPasswordCorrect = await bcryptjs.compare(password, user.password)
@@ -227,5 +229,98 @@ export const facebookLogin = async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: "Facebook login failed" })
+  }
+}
+
+export const forgetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body
+    if (!email) {
+      res.status(400).json({ error: "Email is required" })
+      return
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } })
+
+    if (!user) {
+      res.status(404).json({ error: "User with this email does not exist" })
+      return
+    }
+
+    const token = generateResetToken(user.id)
+    const resetLink = `${process.env.FE_URL}/reset-password?token=${token}`
+
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px;">
+        <div style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="padding: 20px; text-align: center; background-color: #4caf50; color: white;">
+            <h2>Trip Planner</h2>
+          </div>
+          <div style="padding: 30px;">
+            <p style="font-size: 16px;">Hi <strong>${user.fullname}</strong>,</p>
+            <p style="font-size: 15px;">Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu của bạn.</p>
+            <p style="font-size: 15px;">Nhấn vào nút bên dưới để tiến hành:</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" style="background-color: #4caf50; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; font-size: 16px;">Đặt lại mật khẩu</a>
+            </div>
+
+            <p style="font-size: 14px; color: #888;">Liên kết sẽ hết hạn sau 15 phút. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
+            <p style="font-size: 14px;">Cảm ơn bạn,</p>
+            <p style="font-size: 14px; font-weight: bold;">Trip Planner Team</p>
+          </div>
+        </div>
+      </div>`
+
+    await sendEmail(email, 'Reset Your Password', emailContent)
+
+    res.status(200).json({ message: "Reset link sent to your email" })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: "Failed to send reset email" })
+  }
+}
+
+import jwt from "jsonwebtoken"
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { token, password } = req.body
+
+  if (!token || !password) {
+    res.status(400).json({ error: "Token và mật khẩu mới là bắt buộc." })
+    return
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET!) as { id: string }
+    const userId = decoded.id
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      res.status(404).json({ error: "Người dùng không tồn tại." })
+      return
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 10)
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    })
+
+    res.status(200).json({ message: "Đặt lại mật khẩu thành công." })
+  } catch (err: any) {
+    console.error("Reset password error:", err)
+
+    if (err.name === "TokenExpiredError") {
+      res.status(400).json({ error: "Token đã hết hạn. Vui lòng yêu cầu lại." })
+      return
+    }
+    if (err.name === "JsonWebTokenError") {
+      res.status(400).json({ error: "Token không hợp lệ." })
+      return
+    }
+
+    res.status(500).json({ error: "Có lỗi xảy ra khi đặt lại mật khẩu." })
   }
 }

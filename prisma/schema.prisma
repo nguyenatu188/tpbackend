@@ -10,7 +10,6 @@ datasource db {
 enum Privacy {
   PUBLIC
   PRIVATE
-  FRIENDS_ONLY
 }
 
 enum Gender {
@@ -38,7 +37,8 @@ model User {
 model Trip {
   id              String         @id @default(uuid())
   title           String
-  description     String?
+  country         String
+  city            String
   startDate       DateTime
   endDate         DateTime
   privacy         Privacy
@@ -53,6 +53,7 @@ model Trip {
   links           ReferenceLink[]
   notifications   Notification[]
   reviews         Review[]
+  isActive        Boolean        @default(true)
 }
 
 model Accommodation {
@@ -142,5 +143,3 @@ model Follow {
 
   @@unique([followerId, followingId])
 }
-
-

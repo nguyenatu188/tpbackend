@@ -1,5 +1,5 @@
 import express from "express"
-import { login, logout, register, getMe, googleLogin, facebookLogin } from "../controllers/auth.controller.js"
+import { login, logout, register, getMe, googleLogin, facebookLogin, forgetPassword, resetPassword } from "../controllers/auth.controller.js"
 import protectRoute from "../middleware/protectRoute.js"
 
 const router = express.Router()
@@ -20,5 +20,11 @@ router.post("/google" ,googleLogin)
 
 // <url>/api/auth/facebook
 router.post("/facebook", facebookLogin)
+
+// <url>/api/auth/forgot-password
+router.post("/forget-password", forgetPassword)
+
+// <url>/api/auth/reset-password
+router.post("/reset-password", resetPassword)
 
 export default router
