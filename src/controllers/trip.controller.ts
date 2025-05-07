@@ -139,3 +139,41 @@ export const updateTripPrivacy = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error" })
   }
 }
+
+
+export const getPublicTripsByUser = async (req: Request, res: Response) => {
+  try {
+    const targetUserId = req.params.userId
+
+    // Kiểm tra user tồn tại
+    const user = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true },
+    })
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" })
+      return
+    }
+
+    // Lấy danh sách trip PUBLIC của user đó
+    const publicTrips = await prisma.trip.findMany({
+      where: {
+        ownerId: targetUserId,
+        isActive: true,
+        privacy: 'PUBLIC',
+      },
+      orderBy: { startDate: "asc" },
+      include: {
+        owner: {
+          select: { id: true, username: true, fullname: true, avatarUrl: true },
+        },
+      },
+    })
+
+    res.status(200).json(publicTrips)
+  } catch (error) {
+    console.error("Lỗi khi lấy public trips của user:", error)
+    res.status(500).json({ message: "Internal server error" })
+  }
+}
