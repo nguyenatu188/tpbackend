@@ -52,3 +52,48 @@ export const searchUsers = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Lỗi hệ thống" });
   }
 };
+
+
+export const getUserProfile = async (req: Request, res: Response) => {
+  const { username } = req.params;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        fullname: true,
+        username: true,
+        email: true,
+        gender: true,
+        avatarUrl: true,
+        createdAt: true,
+        trips: {
+          where: { privacy: 'PUBLIC' },
+          select: {
+            id: true,
+            title: true,
+            country: true,
+            city: true,
+            startDate: true,
+            endDate: true,
+            privacy: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return
+    }
+
+    res.json(user);
+    return 
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Internal server error' });
+    return 
+  }
+};
