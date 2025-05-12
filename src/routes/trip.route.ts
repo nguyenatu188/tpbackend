@@ -9,6 +9,4 @@ router.post("/", protectRoute , addNewTrip)
 router.delete("/:id", protectRoute, deleteTrip)
 router.patch('/:id/privacy', protectRoute ,updateTripPrivacy)
 
-
-
 export default router

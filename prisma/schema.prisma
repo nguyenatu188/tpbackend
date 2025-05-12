@@ -42,12 +42,15 @@ model Trip {
   startDate       DateTime
   endDate         DateTime
   privacy         Privacy
+  lat             Float?
+  lng             Float?
   ownerId         String
   owner           User           @relation("TripOwner", fields: [ownerId], references: [id])
   accommodations  Accommodation[]
   transports      Transport[]
   activities      Activity[]
   packingList     PackingItem[]
+  packingCategories PackingCategory[]
   suggestions     Suggestion[]
   sharedUsers     User[]         @relation("TripSharedUsers")
   links           ReferenceLink[]
@@ -86,13 +89,25 @@ model Activity {
   trip      Trip     @relation(fields: [tripId], references: [id])
 }
 
-model PackingItem {
-  id        String   @id @default(uuid())
+model PackingCategory {
+  id        String        @id @default(uuid())
   name      String
-  quantity  Int
-  checked   Boolean  @default(false)
-  tripId    String
-  trip      Trip     @relation(fields: [tripId], references: [id])
+  tripId    String?      // Null cho danh mục mặc định
+  trip      Trip?        @relation(fields: [tripId], references: [id])
+  items     PackingItem[]
+  isDefault Boolean      @default(false) // Đánh dấu danh mục mặc định
+}
+
+model PackingItem {
+  id          String           @id @default(uuid())
+  name        String
+  quantity    Int
+  checked     Boolean          @default(false)
+  tripId      String
+  trip        Trip             @relation(fields: [tripId], references: [id])
+  categoryId  String
+  category    PackingCategory  @relation(fields: [categoryId], references: [id])
+  isDefault Boolean      @default(false) // Đánh dấu items mặc định
 }
 
 model Suggestion {

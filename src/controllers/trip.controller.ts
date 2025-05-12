@@ -41,6 +41,8 @@ export const addNewTrip = async (req: Request, res: Response) => {
       startDate,
       endDate,
       privacy,
+      lat,
+      lng,
     } = req.body
 
     const newTrip = await prisma.trip.create({
@@ -51,6 +53,8 @@ export const addNewTrip = async (req: Request, res: Response) => {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         privacy,
+        lat,
+        lng,
         ownerId: userId,
       },
     })
@@ -132,7 +136,7 @@ export const updateTripPrivacy = async (req: Request, res: Response) => {
 
     res.status(200).json({ 
       message: "Trip privacy updated successfully",
-      privacy: updatedTrip.privacy
+      trip: updatedTrip
     })
   } catch (error) {
     console.error("Lỗi khi cập nhật privacy của trip:", error)

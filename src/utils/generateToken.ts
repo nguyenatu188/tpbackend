@@ -15,7 +15,7 @@ const generateToken = (userId: string, res: Response) => {
   return token
 }
 
-export const generateResetToken = (id: string) => { 
+export const generateResetToken = (id: string) => {
   return jwt.sign({ id }, process.env.JWT_RESET_SECRET!, { expiresIn: '15m' })
 }
 
