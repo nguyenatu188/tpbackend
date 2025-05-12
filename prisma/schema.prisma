@@ -83,7 +83,7 @@ model Activity {
   name      String
   location  String
   time      DateTime
-  price     Float?
+  pice     Float?
   category  String
   tripId    String
   trip      Trip     @relation(fields: [tripId], references: [id])
@@ -95,7 +95,7 @@ model PackingCategory {
   tripId    String?      // Null cho danh mục mặc định
   trip      Trip?        @relation(fields: [tripId], references: [id])
   items     PackingItem[]
-  isDefault Boolean      @default(false) // Đánh dấu danh mục mặc định
+  isDefault Boolean      @default(true) // Đánh dấu danh mục mặc định
 }
 
 model PackingItem {
@@ -107,7 +107,7 @@ model PackingItem {
   trip        Trip             @relation(fields: [tripId], references: [id])
   categoryId  String
   category    PackingCategory  @relation(fields: [categoryId], references: [id])
-  isDefault Boolean      @default(false) // Đánh dấu items mặc định
+  isDefault Boolean      @default(true) // Đánh dấu items mặc định
 }
 
 model Suggestion {
