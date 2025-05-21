@@ -69,7 +69,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
         avatarUrl: true,
         createdAt: true,
         trips: {
-          where: { privacy: 'PUBLIC' },
+          where: { privacy: 'PUBLIC', isActive: true },
           select: {
             id: true,
             title: true,
@@ -78,6 +78,8 @@ export const getUserProfile = async (req: Request, res: Response) => {
             startDate: true,
             endDate: true,
             privacy: true,
+            lat: true,
+            lng: true,
             isActive: true,
           },
         },

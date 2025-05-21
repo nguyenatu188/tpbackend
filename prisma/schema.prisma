@@ -39,6 +39,7 @@ model Trip {
   title           String
   country         String
   city            String
+  price           Float?
   startDate       DateTime
   endDate         DateTime
   privacy         Privacy
