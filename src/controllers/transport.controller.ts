@@ -115,14 +115,17 @@ export const createTransport = async (req: Request, res: Response) => {
       return;
     }
 
+    const parsedPrice = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0
+
+
     // Tạo transport mới
     const newTransport = await prisma.transport.create({
       data: {
-        type,
-        from,
-        to,
-        price: price !== undefined ? parseFloat(price) : null,
-        tripId,
+        type: type,
+        from: from,
+        to: to,
+        price: parsedPrice,
+        tripId: tripId,
         startDate: parsedStartDate,
         endDate: parsedEndDate,
       },
@@ -225,11 +228,11 @@ export const updateTransport = async (req: Request, res: Response) => {
     const updatedTransport = await prisma.transport.update({
       where: { id },
       data: {
-        type,
-        from,
-        to,
-        price: price !== undefined ? parseFloat(price) : null,
-        tripId,
+        type: type,
+        from: from,
+        to: to,
+        price: price ? (typeof price === 'string' ? parseFloat(price) : price) : 0,
+        tripId: tripId,
         startDate: parsedStartDate,
         endDate: parsedEndDate,
       },

@@ -226,7 +226,7 @@ export const facebookLogin = async (req: Request, res: Response) => {
       user = await prisma.user.create({
         data: {
           fullname: name || "No name",
-          username: (email?.split("@")[0] ?? "fb_user") + "_" + facebookId.slice(0, 6),
+          username: (email?.split("@")[0] ?? "fb_user") + "_" + facebookId.slice(0, 3),
           email: email || `fb_${facebookId}@facebook.com`,
           gender: parsedGender,
           password: "",

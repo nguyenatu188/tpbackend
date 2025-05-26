@@ -10,7 +10,8 @@ import packingCategoryRoutes from './routes/packingCategory.route.js';
 import accommodationRoutes from './routes/accommodation.route.js'
 import packingItemRoutes from './routes/packingItem.route.js';
 import transportRoutes from './routes/transport.route.js'
-
+import activityRoutes from './routes/activity.route.js'
+import referenceRoutes from './routes/referenceLink.route.js'
 
 dotenv.config()
 
@@ -24,6 +25,7 @@ app.use(express.json())
 // Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/trip', tripRoutes)
+app.use('/api/activities', activityRoutes)
 
 app.use('/api/users', userRoutes);
 app.use('/api/packingCategory', packingCategoryRoutes);
@@ -31,6 +33,8 @@ app.use('/api/packingItems', packingItemRoutes);
 
 app.use('/api/accommodations', accommodationRoutes);
 app.use('/api/transports', transportRoutes);
+
+app.use('/api/references', referenceRoutes);
 
 // Start server
 app.listen(PORT, () => {

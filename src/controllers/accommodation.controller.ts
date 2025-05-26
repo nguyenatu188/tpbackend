@@ -59,12 +59,15 @@ export const createAccommodation = async (req: Request, res: Response) => {
       return;
     }
 
+    const parsedPrice = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0
+
+
     const accommodation = await prisma.accommodation.create({
       data: {
         name,
         location,
         tripId,
-        price: price != null ? parseFloat(price) : null,
+        price: parsedPrice,
         startDate: parsedStartDate,
         endDate: parsedEndDate,
       },
