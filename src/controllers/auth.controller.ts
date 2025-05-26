@@ -5,10 +5,11 @@ import generateToken from '../utils/generateToken.js'
 import { OAuth2Client } from 'google-auth-library'
 import sendEmail from '../utils/sendEmail.js'
 import { generateResetToken } from '../utils/generateToken.js'
+import jwt from "jsonwebtoken"
 
 export const login = async (req: Request, res:Response) => {
   try {
-    const { username, password } = req.body //destructuring
+    const { username, password } = req.body
     const user = await prisma.user.findUnique({ where: { username } })
     if (!user) {
       res.status(400).json({error: "can't find user"})
@@ -26,6 +27,8 @@ export const login = async (req: Request, res:Response) => {
       id: user.id,
       fullname: user.fullname,
       username: user.username,
+      email: user.email,
+      gender: user.gender,
       avatarUrl: user.avatarUrl,
     })
   } catch (error: any) {
@@ -82,6 +85,8 @@ export const register = async (req: Request, res: Response) => {
         id: newUser.id,
         fullname: newUser.fullname,
         username: newUser.username,
+        email: newUser.email,
+        gender: newUser.gender,
         avatarUrl: newUser.avatarUrl,
       })
     } else {
@@ -96,7 +101,17 @@ export const register = async (req: Request, res: Response) => {
 //get the current user
 export const getMe = async (req: Request, res:Response) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        _count: {
+          select: {
+            followers: true,  // Số người theo dõi mình
+            following: true   // Số người mình đang theo dõi
+          }
+        }
+      }
+    })
     
     if (!user) {
       res.status(404).json({message: "User not found"})
@@ -107,7 +122,11 @@ export const getMe = async (req: Request, res:Response) => {
       id: user.id,
       fullname: user.fullname,
       username: user.username,
-      avatarUrl: user.avatarUrl
+      email: user.email,
+      gender: user.gender,
+      avatarUrl: user.avatarUrl,
+      followersCount: user._count?.followers,
+      followingCount: user._count?.following
     })
   } catch (error) {
     console.log(error)
@@ -280,8 +299,6 @@ export const forgetPassword = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to send reset email" })
   }
 }
-
-import jwt from "jsonwebtoken"
 
 export const resetPassword = async (req: Request, res: Response) => {
   const { token, password } = req.body

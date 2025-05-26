@@ -181,3 +181,62 @@ export const getPublicTripsByUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error" })
   }
 }
+
+export const updateTripDetails = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id
+    const tripId = req.params.id
+    const { title, country, city, startDate, endDate } = req.body
+
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+
+    const errors: { [key: string]: string } = {}
+
+    // ngày kết thúc mà sau ngày bắt đầu là chết
+    if (start > end) {
+      errors.dateRange = 'End date cannot be before start date'
+    }
+
+    if (!title || !country || !city || !startDate || !endDate) {
+      res.status(400).json({ message: "Missing required fields" })
+      return
+    }
+
+    // Check trip exists và user là owner
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { ownerId: true }
+    })
+
+    if (!trip) {
+      res.status(404).json({ message: "Trip not found" })
+      return
+    }
+
+    if (trip.ownerId !== userId) {
+      res.status(403).json({ message: "Not authorized to update this trip" })
+      return
+    }
+
+    // Update trip
+    const updatedTrip = await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        title,
+        country,
+        city,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate)
+      }
+    })
+
+    res.status(200).json({
+      message: "Trip updated successfully",
+      trip: updatedTrip
+    })
+  } catch (error) {
+    console.error("Lỗi khi cập nhật thông tin trip:", error)
+    res.status(500).json({ message: "Internal server error" })
+  }
+}

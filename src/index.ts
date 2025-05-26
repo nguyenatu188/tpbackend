@@ -5,9 +5,9 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/auth.route.js'
 import tripRoutes from './routes/trip.route.js'
 
-import userRoutes from './routes/user.route.js';
+import userRoutes from './routes/user.route.js'
 import tripdetailRoutes from './routes/tripdetail.route.js'
-import packingCategoryRoutes from './routes/packingCategory.route.js';
+import packingCategoryRoutes from './routes/packingCategory.route.js'
 
 
 dotenv.config()
