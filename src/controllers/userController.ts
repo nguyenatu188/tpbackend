@@ -9,6 +9,7 @@ cloudinary.config({
 })
 
 // Hàm tìm kiếm người dùng theo username
+// Hàm tìm kiếm người dùng theo username hoặc fullname
 export const searchUsers = async (req: Request, res: Response) => {
   try {
     const { query } = req.query
@@ -20,9 +21,13 @@ export const searchUsers = async (req: Request, res: Response) => {
 
     const searchQuery = query as string
 
+    // Tìm kiếm người dùng theo username hoặc fullname
     const users = await prisma.user.findMany({
       where: {
-        username: { contains: searchQuery, mode: 'insensitive' },
+        OR: [
+          { username: { contains: searchQuery, mode: 'insensitive' } },
+          { fullname: { contains: searchQuery, mode: 'insensitive' } },
+        ],
       },
       select: {
         id: true,
@@ -33,27 +38,36 @@ export const searchUsers = async (req: Request, res: Response) => {
       take: 10,
     })
 
+    // Gợi ý tìm kiếm dựa trên username hoặc fullname
     const suggestions = await prisma.user.findMany({
       where: {
-        username: { startsWith: searchQuery, mode: 'insensitive' }
+        OR: [
+          { username: { startsWith: searchQuery, mode: 'insensitive' } },
+          { fullname: { startsWith: searchQuery, mode: 'insensitive' } },
+        ],
       },
       select: {
         username: true,
+        fullname: true,
       },
       take: 5,
-      orderBy: { username: 'asc' }
-    })
+      orderBy: { username: 'asc' },
+    });
 
-    const completions = suggestions.map(user => user.username)
-      .filter((username, index, self) => self.indexOf(username) === index)
+    // Tạo danh sách gợi ý duy nhất (kết hợp username và fullname)
+    const completions = Array.from(
+      new Set(
+        suggestions.flatMap(user => [user.username, user.fullname]).filter(Boolean)
+      )
+    ).slice(0, 5);
 
     res.status(200).json({
       message: "Tìm kiếm thành công",
       data: {
         users,
-        suggestions: completions
-      }
-    })
+        suggestions: completions,
+      },
+    });
   } catch (err) {
     console.error("Lỗi khi tìm kiếm người dùng:", err)
     res.status(500).json({ error: "Lỗi hệ thống" })

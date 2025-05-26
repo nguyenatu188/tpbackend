@@ -65,6 +65,8 @@ model Accommodation {
   name      String
   location  String
   price     Float?
+  startDate DateTime // Thêm trường ngày giờ bắt đầu
+  endDate   DateTime // Thêm trường ngày giờ kết thúc
   tripId    String
   trip      Trip     @relation(fields: [tripId], references: [id])
 }
@@ -75,10 +77,11 @@ model Transport {
   from      String
   to        String
   price     Float?
+  startDate DateTime // Thêm trường ngày giờ bắt đầu
+  endDate   DateTime // Thêm trường ngày giờ kết thúc
   tripId    String
   trip      Trip     @relation(fields: [tripId], references: [id])
 }
-
 model Activity {
   id        String   @id @default(uuid())
   name      String

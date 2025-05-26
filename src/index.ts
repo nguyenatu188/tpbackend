@@ -5,9 +5,11 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/auth.route.js'
 import tripRoutes from './routes/trip.route.js'
 
-import userRoutes from './routes/user.route.js'
-import tripdetailRoutes from './routes/tripdetail.route.js'
-import packingCategoryRoutes from './routes/packingCategory.route.js'
+import userRoutes from './routes/user.route.js';
+import packingCategoryRoutes from './routes/packingCategory.route.js';
+import accommodationRoutes from './routes/accommodation.route.js'
+import packingItemRoutes from './routes/packingItem.route.js';
+import transportRoutes from './routes/transport.route.js'
 
 
 dotenv.config()
@@ -24,8 +26,11 @@ app.use('/api/auth', authRoutes)
 app.use('/api/trip', tripRoutes)
 
 app.use('/api/users', userRoutes);
-app.use('/api/tripdetail', tripdetailRoutes);
 app.use('/api/packingCategory', packingCategoryRoutes);
+app.use('/api/packingItems', packingItemRoutes);
+
+app.use('/api/accommodations', accommodationRoutes);
+app.use('/api/transports', transportRoutes);
 
 // Start server
 app.listen(PORT, () => {
