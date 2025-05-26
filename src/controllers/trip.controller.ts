@@ -240,3 +240,76 @@ export const updateTripDetails = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error" })
   }
 }
+export const getTripsByCity = async (req: Request, res: Response) => {
+  try {
+    const { city } = req.query;
+
+    // Kiểm tra city có được cung cấp không
+    if (!city || typeof city !== "string") {
+      res.status(400).json({ message: "City parameter is required and must be a string" });
+      return;
+    }
+
+    // Lấy danh sách trips có cùng city
+    const trips = await prisma.trip.findMany({
+      where: {
+        city: {
+          equals: city,
+          mode: "insensitive", // Không phân biệt hoa thường
+        },
+        isActive: true,
+        privacy: "PUBLIC",
+      },
+      orderBy: { startDate: "asc" },
+      include: {
+        owner: {
+          select: { id: true, username: true, fullname: true, avatarUrl: true },
+        },
+        sharedUsers: {
+          select: { id: true, username: true, avatarUrl: true },
+        },
+      },
+    });
+
+    res.status(200).json(trips);
+  } catch (error) {
+    console.error("Lỗi khi lấy trips theo city:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const getTripById = async (req: Request, res: Response) => {
+  try {
+    const tripId = req.params.id;
+
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId, isActive: true },
+      include: {
+        owner: {
+          select: { id: true, username: true, fullname: true, avatarUrl: true },
+        },
+        sharedUsers: {
+          select: { id: true, username: true, avatarUrl: true },
+        },
+      },
+    });
+
+    if (!trip) {
+      res.status(404).json({ message: "Trip not found" });
+      return;
+    }
+
+    // Kiểm tra quyền truy cập (chỉ owner hoặc shared user được xem)
+    const userId = req.user?.id;
+    if (trip.privacy === "PRIVATE" && userId) {
+      if (trip.ownerId !== userId && !trip.sharedUsers.some((user) => user.id === userId)) {
+        res.status(403).json({ message: "Not authorized to view this trip" });
+        return;
+      }
+    }
+
+    res.status(200).json(trip);
+  } catch (error) {
+    console.error("Lỗi khi lấy chi tiết trip:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
