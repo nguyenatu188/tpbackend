@@ -1,27 +1,19 @@
 import { Router } from 'express';
-import {
-  getAllPackingItems,
-  getPackingItemsByCategory,
-  createPackingItem,
-  updatePackingItem,
-  deletePackingItem,
-} from '../controllers/packingItem.js';
+import { getItemsByTripId, addPackingItem, deletePackingItem, getItemsByCategory } from '../controllers/packingItem.controller.js';
+import protectRoute from '../middleware/protectRoute.js';
 
 const router = Router();
 
-// Lấy tất cả packing items theo tripId
-router.get('/getAllPackingItems', getAllPackingItems);
+// Get PackingItems by tripId
+router.get('/trip/:tripId', protectRoute, getItemsByTripId);
 
-// Lấy packing items theo categoryId và tripId
-router.get('/getPackingItemsByCategory', getPackingItemsByCategory);
+// Get PackingItems by categoryId
+router.get('/category/:categoryId', protectRoute, getItemsByCategory);
 
-// Tạo packing item mới
-router.post('/createPackingItem', createPackingItem);
+// Add a new PackingItem
+router.post('/', protectRoute, addPackingItem);
 
-// Cập nhật packing item theo id
-router.put('/updatePackingItem/:id', updatePackingItem);
-
-// Xóa packing item theo id
-router.delete('/deletePackingItem/:id', deletePackingItem);
+// Delete a PackingItem by ID
+router.delete('/:id', protectRoute, deletePackingItem);
 
 export default router;

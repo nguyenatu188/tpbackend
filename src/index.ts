@@ -27,7 +27,7 @@ app.use('/api/trip', tripRoutes)
 
 app.use('/api/users', userRoutes);
 app.use('/api/packingCategory', packingCategoryRoutes);
-app.use('/api/packingItems', packingItemRoutes);
+app.use('/api/packingItem', packingItemRoutes);
 
 app.use('/api/accommodations', accommodationRoutes);
 app.use('/api/transports', transportRoutes);

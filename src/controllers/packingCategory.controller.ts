@@ -1,198 +1,163 @@
 import { Request, Response } from 'express';
 import prisma from '../db/prisma.js';
 
-// GET: /getAllPackingCategories
-export const getAllPackingCategories = async (req: Request, res: Response) => {
+
+// Add a new PackingCategory
+export async function addPackingCategory(req: Request, res: Response) {
   try {
-    const categories = await prisma.packingCategory.findMany({
-      include: {
-        items: true,
-      },
-    });
-    res.json(categories);
-  } catch (error) {
-    console.error('Get Packing Categories Error:', error);
-    res.status(500).json({ error: 'Failed to get packing categories' });
-  } finally {
-    await prisma.$disconnect();
-  }
-};
+    const { name, tripId } = req.body;
 
-// GET: /getAllPackingCategories?tripId=<tripId>
-export const getPackingCategoriesInTripId = async (req: Request, res: Response) => {
-  const tripId = req.query.tripId as string; // Lấy tripId từ query parameters
+    // Validate input
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ error: 'Name is required and must be a string' });
+      return
+    }
+    if (!tripId || typeof tripId !== 'string') {
+      res.status(400).json({ error: 'tripId is required and must be a string' });
+      return
+    }
 
-  // Kiểm tra tripId có được cung cấp không
-  if (!tripId) {
-    res.status(400).json({ error: 'tripId is required in query parameters' });
-    return;
-  }
-
-  try {
-    // Lấy danh mục mặc định (isDefault: true) và danh mục thuộc tripId
-    const categories = await prisma.packingCategory.findMany({
-      where: {
-        OR: [
-          { isDefault: true }, // Danh mục mặc định
-          { tripId }, // Danh mục thuộc tripId
-        ],
-      },
-      include: {
-        items: true, // Bao gồm các items liên quan
-      },
-    });
-    res.json(categories);
-  } catch (error) {
-    console.error('Get Packing Categories Error:', error);
-    res.status(500).json({ error: 'Failed to get packing categories' });
-  } finally {
-    await prisma.$disconnect();
-  }
-};
-
-// POST: /createPackingCategory
-export const createPackingCategory = async (req: Request, res: Response) => {
-  const { name, tripId, isDefault } = req.body;
-
-  // Kiểm tra dữ liệu đầu vào
-  if (!name) {
-    res.status(400).json({ error: 'Name is required' });
-    return;
-  }
-
-  // Nếu isDefault là false, tripId phải có
-  if (isDefault === false && !tripId) {
-    res.status(400).json({ error: 'tripId is required when isDefault is false' });
-    return;
-  }
-
-  try {
-    // Kiểm tra tên trùng: danh mục mặc định hoặc thuộc tripId
+    // Check for existing category with the same name and tripId
     const existingCategory = await prisma.packingCategory.findFirst({
       where: {
         name,
-        OR: [
-          { isDefault: true }, // Danh mục mặc định
-          { tripId: isDefault === false ? tripId : null }, // Danh mục thuộc tripId nếu không mặc định
-        ],
+        tripId,
       },
     });
 
     if (existingCategory) {
-      res.status(400).json({ error: `Category with name "${name}" already exists` });
+      res.status(409).json({ error: 'A category with this name already exists for the specified trip' });
+      return 
+    }
+
+    // Create new PackingCategory
+    const packingCategory = await prisma.packingCategory.create({
+      data: {
+        name,
+        tripId, // tripId is required
+      },
+      select: {
+        id: true,
+        name: true,
+        tripId: true,
+        trip: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        items: {
+          select: {
+            id: true,
+            name: true,
+            quantity: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+     message: 'Packing category created successfully',
+     data: packingCategory,
+   });
+    return
+  } catch (error) {
+    console.error('Error adding packing category:', error);
+    res.status(500).json({ error: 'Internal server error' });
+    return 
+  }
+}
+
+// Delete a PackingCategory by ID
+export async function deletePackingCategory(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id || typeof id !== 'string') {
+      res.status(400).json({ error: 'Valid ID is required' });
       return;
     }
 
-    // Tạo danh mục mới
-    const newCategory = await prisma.packingCategory.create({
-      data: {
-        name,
-        tripId: isDefault === false ? tripId : null,
-        ...(isDefault !== undefined && { isDefault }), // Chỉ truyền isDefault nếu nó được cung cấp
-      },
+    // Check if PackingCategory exists
+    const packingCategory = await prisma.packingCategory.findUnique({
+      where: { id },
+      include: { items: true },
     });
-    res.status(201).json(newCategory);
+
+    if (!packingCategory) {
+      res.status(404).json({ error: 'Packing category not found' });
+      return;
+    }
+
+    // Delete all associated PackingItems and the PackingCategory in a transaction
+    await prisma.$transaction([
+      prisma.packingItem.deleteMany({
+        where: { categoryId: id }, // Ensure this matches the schema field
+      }),
+      prisma.packingCategory.delete({
+        where: { id },
+      }),
+    ]);
+
+    res.status(200).json({ message: 'Packing category and associated items deleted successfully' });
+    return;
   } catch (error) {
-    console.error('Create Packing Category Error:', error);
-    res.status(500).json({ error: 'Failed to create packing category' });
-  } finally {
-    await prisma.$disconnect();
-  }
-};
-
-// PUT: /updatePackingCategory/:id
-export const updatePackingCategory = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { name, tripId, isDefault } = req.body;
-
-  // Kiểm tra dữ liệu đầu vào
-  if (!name) {
-    res.status(400).json({ error: 'Name is required' });
+    console.error('Error deleting packing category:', error);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
-
+}
+// Get PackingCategories by tripId
+export async function getCategoriesByTripId(req: Request, res: Response) {
   try {
-    // Kiểm tra tên trùng: danh mục mặc định hoặc thuộc tripId, ngoại trừ danh mục hiện tại
-    const existingCategory = await prisma.packingCategory.findFirst({
+    const { tripId } = req.params;
+
+    // Validate tripId
+    if (!tripId || typeof tripId !== 'string') {
+      res.status(400).json({ error: 'Valid tripId is required' });
+      return 
+    }
+
+    // Fetch PackingCategories by tripId
+    const packingCategories = await prisma.packingCategory.findMany({
       where: {
-        name,
-        id: { not: id }, // Loại trừ danh mục đang cập nhật
-        OR: [
-          { isDefault: true }, // Danh mục mặc định
-          { tripId: isDefault === false ? tripId : null }, // Danh mục thuộc tripId nếu không mặc định
-        ],
+        tripId,
+      },
+      select: {
+        id: true,
+        name: true,
+        tripId: true,
+        trip: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        items: {
+          select: {
+            id: true,
+            name: true,
+            quantity: true,
+          },
+        },
       },
     });
 
-    if (existingCategory) {
-      res.status(400).json({ error: `Category with name "${name}" already exists` });
-      return;
+    // Check if any categories were found
+    if (packingCategories.length === 0) {
+      res.status(404).json({ message: 'No packing categories found for this trip' });
+      return
     }
 
-    // Cập nhật danh mục
-    const updatedCategory = await prisma.packingCategory.update({
-      where: { id },
-      data: {
-        name,
-        tripId: isDefault === false ? tripId : null,
-        ...(isDefault !== undefined && { isDefault }), // Chỉ truyền isDefault nếu nó được cung cấp
-      },
-    });
-    res.json(updatedCategory);
+    res.status(200).json({
+     message: 'Packing categories retrieved successfully',
+     data: packingCategories,
+   });
+    return
   } catch (error) {
-    console.error('Update Packing Category Error:', error);
-    res.status(500).json({ error: 'Failed to update packing category' });
-  } finally {
-    await prisma.$disconnect();
+    console.error('Error fetching packing categories:', error);
+    res.status(500).json({ error: 'Internal server error' });
+    return 
   }
-};
-
-// DELETE: /deletePackingCategory/:id?tripId=<tripId>
-export const deletePackingCategory = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const tripId = req.query.tripId as string; // Ép kiểu tripId thành string từ query params
-
-  // Kiểm tra tripId có được cung cấp không
-  if (!tripId) {
-    res.status(400).json({ error: 'tripId is required in query parameters' });
-    return;
-  }
-
-  try {
-    // Tìm category cần xóa
-    const category = await prisma.packingCategory.findUnique({
-      where: { id },
-    });
-
-    // Kiểm tra category tồn tại
-    if (!category) {
-      res.status(404).json({ error: 'Category not found' });
-      return;
-    }
-
-    // Kiểm tra điều kiện xóa:
-    // 1. Không phải category mặc định (isDefault = false)
-    // 2. Thuộc trip hiện tại (tripId khớp)
-    if (category.isDefault) {
-      res.status(403).json({ error: 'Cannot delete default category' });
-      return;
-    }
-
-    if (category.tripId !== tripId) {
-      res.status(403).json({ error: 'Can only delete categories from the current trip' });
-      return;
-    }
-
-    // Xóa category
-    await prisma.packingCategory.delete({
-      where: { id },
-    });
-
-    res.status(204).send(); // Trả về 204 No Content khi xóa thành công
-  } catch (error) {
-    console.error('Delete Packing Category Error:', error);
-    res.status(500).json({ error: 'Failed to delete packing category' });
-  } finally {
-    await prisma.$disconnect();
-  }
-};
+}
