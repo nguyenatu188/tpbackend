@@ -8,6 +8,9 @@ export const getAllTransports = async (req: Request, res: Response) => {
       include: {
         trip: true,
       },
+      orderBy: {
+        startDate: 'asc', // Sắp xếp theo startDate tăng dần
+      },
     });
     res.json(transports);
   } catch (error) {
@@ -35,6 +38,9 @@ export const getTransportsByTripId = async (req: Request, res: Response) => {
       include: {
         trip: true,
       },
+      orderBy: {
+        startDate: 'asc', // Sắp xếp theo startDate tăng dần
+      },
     });
     res.json(transports);
   } catch (error) {
@@ -49,8 +55,9 @@ export const getTransportsByTripId = async (req: Request, res: Response) => {
 export const createTransport = async (req: Request, res: Response) => {
   const { type, from, to, price, tripId, startDate, endDate } = req.body;
 
-  if (!type || !from || !to || !tripId || !startDate || !endDate) {
-    res.status(400).json({ error: 'Type, from, to, tripId, startDate, and endDate are required' });
+  // Kiểm tra tất cả các trường bắt buộc, bao gồm price
+  if (!type || !from || !to || price == null || !tripId || !startDate || !endDate) {
+    res.status(400).json({ error: 'Type, from, to, price, tripId, startDate, and endDate are required' });
     return;
   }
 
@@ -94,7 +101,14 @@ export const createTransport = async (req: Request, res: Response) => {
       return;
     }
 
-    // Kiểm tra chồng lấn thời gian với các transport hiện có trong cùng tripId
+    // Kiểm tra price là số không âm
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      res.status(400).json({ error: 'Price must be a non-negative number' });
+      return;
+    }
+
+    // Kiểm tra chồng lấn thời gian
     const existingTransports = await prisma.transport.findMany({
       where: { tripId },
       select: { startDate: true, endDate: true },
@@ -115,17 +129,14 @@ export const createTransport = async (req: Request, res: Response) => {
       return;
     }
 
-    const parsedPrice = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0
-
-
     // Tạo transport mới
     const newTransport = await prisma.transport.create({
       data: {
-        type: type,
-        from: from,
-        to: to,
+        type,
+        from,
+        to,
         price: parsedPrice,
-        tripId: tripId,
+        tripId,
         startDate: parsedStartDate,
         endDate: parsedEndDate,
       },
@@ -138,19 +149,17 @@ export const createTransport = async (req: Request, res: Response) => {
     await prisma.$disconnect();
   }
 };
-
 // PUT: /updateTransport/:id
 export const updateTransport = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { type, from, to, price, tripId, startDate, endDate } = req.body;
 
-  if (!type || !from || !to || !tripId || !startDate || !endDate) {
-    res.status(400).json({ error: 'Type, from, to, tripId, startDate, and endDate are required' });
+  if (!type || !from || !to || price == null || !tripId || !startDate || !endDate) {
+    res.status(400).json({ error: 'Type, from, to, price, tripId, startDate, and endDate are required' });
     return;
   }
 
   try {
-    // Kiểm tra transport có tồn tại
     const transportExists = await prisma.transport.findUnique({
       where: { id },
     });
@@ -160,7 +169,6 @@ export const updateTransport = async (req: Request, res: Response) => {
       return;
     }
 
-    // Kiểm tra tripId có tồn tại
     const tripExists = await prisma.trip.findUnique({
       where: { id: tripId },
     });
@@ -170,7 +178,6 @@ export const updateTransport = async (req: Request, res: Response) => {
       return;
     }
 
-    // Kiểm tra trùng: type, from, to trong cùng tripId, ngoại trừ transport hiện tại
     const existingTransport = await prisma.transport.findFirst({
       where: {
         type,
@@ -194,17 +201,21 @@ export const updateTransport = async (req: Request, res: Response) => {
       return;
     }
 
-    // Kiểm tra startDate phải trước endDate
     if (parsedStartDate >= parsedEndDate) {
       res.status(400).json({ error: 'startDate must be before endDate' });
       return;
     }
 
-    // Kiểm tra chồng lấn thời gian với các transport khác trong cùng tripId
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      res.status(400).json({ error: 'Price must be a non-negative number' });
+      return;
+    }
+
     const existingTransports = await prisma.transport.findMany({
       where: {
         tripId,
-        id: { not: id }, // Loại trừ transport hiện tại
+        id: { not: id },
       },
       select: { startDate: true, endDate: true },
     });
@@ -228,11 +239,11 @@ export const updateTransport = async (req: Request, res: Response) => {
     const updatedTransport = await prisma.transport.update({
       where: { id },
       data: {
-        type: type,
-        from: from,
-        to: to,
-        price: price ? (typeof price === 'string' ? parseFloat(price) : price) : 0,
-        tripId: tripId,
+        type,
+        from,
+        to,
+        price: parsedPrice,
+        tripId,
         startDate: parsedStartDate,
         endDate: parsedEndDate,
       },
@@ -245,7 +256,6 @@ export const updateTransport = async (req: Request, res: Response) => {
     await prisma.$disconnect();
   }
 };
-
 // DELETE: /deleteTransport/:id?tripId=<tripId>
 export const deleteTransport = async (req: Request, res: Response) => {
   const { id } = req.params;

@@ -12,6 +12,7 @@ import packingItemRoutes from './routes/packingItem.route.js';
 import transportRoutes from './routes/transport.route.js'
 import activityRoutes from './routes/activity.route.js'
 import referenceRoutes from './routes/referenceLink.route.js'
+import budgetRoute from './routes/budget.route.js'
 
 dotenv.config()
 
@@ -29,12 +30,13 @@ app.use('/api/activities', activityRoutes)
 
 app.use('/api/users', userRoutes);
 app.use('/api/packingCategory', packingCategoryRoutes);
-app.use('/api/packingItems', packingItemRoutes);
+app.use('/api/packingItem', packingItemRoutes);
 
 app.use('/api/accommodations', accommodationRoutes);
 app.use('/api/transports', transportRoutes);
 
 app.use('/api/references', referenceRoutes);
+app.use("/api/budget", budgetRoute);
 
 // Start server
 app.listen(PORT, () => {

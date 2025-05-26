@@ -3,7 +3,6 @@ import prisma from "../db/prisma.js";
 
 export const createAccommodation = async (req: Request, res: Response) => {
   try {
-    // Kiểm tra xem req.body có tồn tại không
     if (!req.body) {
       res.status(400).json({ error: "Request body is required" });
       return;
@@ -11,9 +10,9 @@ export const createAccommodation = async (req: Request, res: Response) => {
 
     const { name, location, tripId, price, startDate, endDate } = req.body;
 
-    // Kiểm tra các trường bắt buộc
-    if (!name || !location || !tripId || !startDate || !endDate) {
-      res.status(400).json({ error: "Name, location, tripId, startDate, and endDate are required" });
+    // Kiểm tra tất cả các trường bắt buộc, bao gồm price
+    if (!name || !location || !tripId || price == null || !startDate || !endDate) {
+      res.status(400).json({ error: "Name, location, tripId, price, startDate, and endDate are required" });
       return;
     }
 
@@ -38,7 +37,14 @@ export const createAccommodation = async (req: Request, res: Response) => {
       return;
     }
 
-    // Kiểm tra chồng lấn thời gian với các accommodation hiện có trong cùng tripId
+    // Kiểm tra price là số không âm
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      res.status(400).json({ error: "Price must be a non-negative number" });
+      return;
+    }
+
+    // Kiểm tra chồng lấn thời gian
     const existingAccommodations = await prisma.accommodation.findMany({
       where: { tripId },
       select: { startDate: true, endDate: true },
@@ -59,9 +65,6 @@ export const createAccommodation = async (req: Request, res: Response) => {
       return;
     }
 
-    const parsedPrice = price ? (typeof price === 'string' ? parseFloat(price) : price) : 0
-
-
     const accommodation = await prisma.accommodation.create({
       data: {
         name,
@@ -73,7 +76,6 @@ export const createAccommodation = async (req: Request, res: Response) => {
       },
     });
 
-    // Thêm thông báo thành công
     res.status(201).json({ message: "Accommodation created successfully", data: accommodation });
   } catch (error) {
     console.error("Error creating accommodation:", error);
@@ -91,6 +93,9 @@ export const getAccommodations = async (req: Request, res: Response) => {
 
     const accommodations = await prisma.accommodation.findMany({
       where: { tripId },
+      orderBy: {
+        startDate: 'asc', // Sắp xếp theo startDate tăng dần
+      },
     });
 
     // Thêm thông báo thành công
@@ -135,11 +140,20 @@ export const updateAccommodation = async (req: Request, res: Response) => {
 
     const { name, location, price, startDate, endDate } = req.body;
 
-    // Kiểm tra accommodation có tồn tại không
     const accommodation = await prisma.accommodation.findUnique({ where: { id } });
     if (!accommodation) {
       res.status(404).json({ error: "Accommodation not found" });
       return;
+    }
+
+    // Validate price nếu được cung cấp
+    let parsedPrice = accommodation.price;
+    if (price != null) {
+      parsedPrice = parseFloat(price.toString());
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        res.status(400).json({ error: "Price must be a non-negative number" });
+        return;
+      }
     }
 
     // Validate startDate và endDate nếu được cung cấp
@@ -159,11 +173,11 @@ export const updateAccommodation = async (req: Request, res: Response) => {
         return;
       }
 
-      // Kiểm tra chồng lấn thời gian với các accommodation khác trong cùng tripId
+      // Kiểm tra chồng lấn thời gian
       const existingAccommodations = await prisma.accommodation.findMany({
         where: {
           tripId: accommodation.tripId,
-          id: { not: id }, // Loại trừ accommodation đang được cập nhật
+          id: { not: id },
         },
         select: { startDate: true, endDate: true },
       });
@@ -184,19 +198,17 @@ export const updateAccommodation = async (req: Request, res: Response) => {
       }
     }
 
-    // Cập nhật accommodation với các giá trị mới (nếu có)
     const updatedAccommodation = await prisma.accommodation.update({
       where: { id },
       data: {
         name: name ?? accommodation.name,
         location: location ?? accommodation.location,
-        price: price != null ? parseFloat(price.toString()) : accommodation.price,
+        price: parsedPrice,
         startDate: parsedStartDate,
         endDate: parsedEndDate,
       },
     });
 
-    // Thêm thông báo thành công
     res.status(200).json({ message: "Accommodation updated successfully", data: updatedAccommodation });
   } catch (error) {
     console.error("Error updating accommodation:", error);
