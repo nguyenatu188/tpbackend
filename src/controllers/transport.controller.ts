@@ -8,6 +8,9 @@ export const getAllTransports = async (req: Request, res: Response) => {
       include: {
         trip: true,
       },
+      orderBy: {
+        startDate: 'asc', // Sắp xếp theo startDate tăng dần
+      },
     });
     res.json(transports);
   } catch (error) {
@@ -34,6 +37,9 @@ export const getTransportsByTripId = async (req: Request, res: Response) => {
       },
       include: {
         trip: true,
+      },
+      orderBy: {
+        startDate: 'asc', // Sắp xếp theo startDate tăng dần
       },
     });
     res.json(transports);

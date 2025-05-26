@@ -88,6 +88,9 @@ export const getAccommodations = async (req: Request, res: Response) => {
 
     const accommodations = await prisma.accommodation.findMany({
       where: { tripId },
+      orderBy: {
+        startDate: 'asc', // Sắp xếp theo startDate tăng dần
+      },
     });
 
     // Thêm thông báo thành công
